@@ -1,4 +1,4 @@
-import { listarProdutos as listarProdutosData, buscarProdutoPorId as buscarProdutoPorIdData, cadastrarProduto as cadastrarProdutoData, atualizarProduto as atualizarProdutoData, deletarProduto as deletarProdutoData } from "../data/produtosData.js";
+import { listarProdutos as listarProdutosData, buscarProdutoPorId as buscarProdutoPorIdData, buscarProdutoPorCodigoBarras as buscarProdutoPorCodigoBarrasData, cadastrarProduto as cadastrarProdutoData, atualizarProduto as atualizarProdutoData, deletarProduto as deletarProdutoData } from "../data/produtosData.js";
 
 import { validarIdProduto, validarDadosProduto, validarDadosProdutoCompleto } from "../validators/produtosValidator.js";
 
@@ -40,6 +40,34 @@ export async function buscarProdutoPorId(req, res) {
 
         return res.status(500).json({
             mensagem: 'Erro interno ao consultar o produto.'
+        });
+    }
+}
+
+export async function buscarProdutoPorCodigoBarras(req, res) {
+    const { codigoBarras } = req.params;
+
+    if (!codigoBarras) {
+        return res.status(400).json({
+            mensagem: 'O código de barras não pode ser vazio.'
+        });
+    }
+
+    try {
+        const produto = await buscarProdutoPorCodigoBarrasData(codigoBarras);
+
+        if (!produto) {
+            return res.status(404).json({
+                mensagem: 'Produto não encontrado.'
+            });
+        }
+
+        return res.status(200).json(produto);
+    } catch (error) {
+        console.error('Erro ao buscar produto por código de barras:', error);
+
+        return res.status(500).json({
+            mensagem: 'Erro interno ao consultar o produto'
         });
     }
 }

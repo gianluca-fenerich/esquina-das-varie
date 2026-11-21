@@ -41,6 +41,20 @@ export async function buscarProdutoPorId(id) {
         return mapearProduto(data);
 }
 
+export async function buscarProdutoPorCodigoBarras(codigoBarras) {
+    const { data, error } = await supabase
+        .from('produtos')
+        .select('*')
+        .eq('codigo_barras', codigoBarras)
+        .maybeSingle();
+
+        if (error) {
+            throw error;
+        }
+
+        return mapearProduto(data);
+}
+
 export async function cadastrarProduto(dados) {
     const { data, error } = await supabase
         .from('produtos')
