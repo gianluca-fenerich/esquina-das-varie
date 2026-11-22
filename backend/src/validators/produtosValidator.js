@@ -18,6 +18,9 @@ export function validarDadosProduto(dados) {
     const camposPermitidos = [
         "nome",
         "codigoBarras",
+        "marca",
+        "categoria",
+        "imagemUrl",
         "precoCustoCentavos",
         "precoVendaCentavos",
         "quantidadeEstoque"
@@ -49,6 +52,27 @@ export function validarDadosProduto(dados) {
         )
     ) {
         return false;
+    }
+
+    const camposTexto = [
+    "marca",
+    "categoria",
+    "imagemUrl"
+    ];
+
+    for (const campo of camposTexto) {
+        const valor = dados[campo];
+
+        if (
+            valor !== undefined &&
+            valor !== null &&
+            (
+                typeof valor !== "string" ||
+                valor.trim() === ""
+            )
+        ) {
+            return false;
+        }
     }
 
     const camposNumericos = [

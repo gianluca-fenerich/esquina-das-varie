@@ -9,6 +9,9 @@ function mapearProduto(produto) {
         id: produto.id,
         nome: produto.nome,
         codigoBarras: produto.codigo_barras,
+        marca: produto.marca,
+        categoria: produto.categoria,
+        imagemUrl: produto.imagem_url,
         precoCustoCentavos: produto.preco_custo_centavos,
         precoVendaCentavos: produto.preco_venda_centavos,
         quantidadeEstoque: produto.quantidade_estoque
@@ -61,6 +64,9 @@ export async function cadastrarProduto(dados) {
         .insert({
             nome: dados.nome.trim(),
             codigo_barras: dados.codigoBarras?.trim() || null,
+            marca: dados.marca ?? null,
+            categoria: dados.categoria ?? null,
+            imagem_url: dados.imagemUrl ?? null,
             preco_custo_centavos: dados.precoCustoCentavos ?? null,
             preco_venda_centavos: dados.precoVendaCentavos ?? null,
             quantidade_estoque: dados.quantidadeEstoque ?? null
@@ -82,6 +88,9 @@ export async function atualizarProduto(id, dados) {
         .update({
             nome: dados.nome.trim(),
             codigo_barras: dados.codigoBarras?.trim() || null,
+            marca: dados.marca ?? null,
+            categoria: dados.categoria ?? null,
+            imagem_url: dados.imagemUrl ?? null,
             preco_custo_centavos: dados.precoCustoCentavos ?? null,
             preco_venda_centavos: dados.precoVendaCentavos ?? null,
             quantidade_estoque: dados.quantidadeEstoque ?? null
