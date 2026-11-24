@@ -1,7 +1,33 @@
-import Caixa from './pages/Caixa'
+import { useState } from "react";
+
+import Caixa from "./pages/Caixa";
+import Produtos from "./pages/Produtos";
 
 function App() {
-  return <Caixa />
+  const [paginaAtual, setPaginaAtual] = useState("caixa");
+
+  return (
+    <>
+    <nav>
+    <button
+      type="button"
+      onClick={() => setPaginaAtual("caixa")}
+    >
+      Caixa
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setPaginaAtual("produtos")}
+    >
+      Produtos
+    </button>
+    </nav>
+
+      {paginaAtual === "caixa" && <Caixa />}
+      {paginaAtual === "produtos" && <Produtos />}
+    </>
+    );
 }
 
-export default App
+export default App;
