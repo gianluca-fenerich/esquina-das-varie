@@ -2,7 +2,6 @@ const API_URL = "http://localhost:3000";
 
 async function requisitarDados(url, mensagemErro, opcoes = {}) {
     const response = await fetch(url, opcoes);
-
     const texto = await response.text();
     const dados = texto ? JSON.parse(texto) : {};
 
@@ -24,5 +23,12 @@ export async function finalizarVenda(dadosVenda) {
             },
             body: JSON.stringify(dadosVenda)
         }
+    );
+}
+
+export async function listarVendasPorData(data) {
+    return requisitarDados(
+        `${API_URL}/vendas?data=${encodeURIComponent(data)}`,
+        "Erro ao consultar histórico de vendas."
     );
 }
