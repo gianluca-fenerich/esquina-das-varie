@@ -1,10 +1,14 @@
 import { supabase } from "../config/supabaseClient.js";
 
 export async function finalizarVenda(dados) {
-    const { data, error } = await supabase.rpc("finalizar_venda", {
-        p_itens: dados.itens,
-        p_forma_pagamento: dados.formaPagamento
-    });
+    const { data, error } = await supabase.rpc(
+        "finalizar_venda_com_cliente",
+        {
+            p_itens: dados.itens,
+            p_forma_pagamento: dados.formaPagamento,
+            p_cliente_id: dados.clienteId ?? null
+        }
+    );
 
     if (error) {
         throw error;

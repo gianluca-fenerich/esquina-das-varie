@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { buscarProdutoPorCodigoBarras } from "../services/produtosService";
 import { finalizarVenda } from "../services/vendasService";
+import { listarClientesAutorizados } from "../services/clientesService";
+
 import ProdutosVenda from "../components/ProdutosVenda";
 
 const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
@@ -14,13 +16,18 @@ function Caixa() {
     const temporizadorLeitura = useRef(null);
 
     const [carrinho, setCarrinho] = useState([]);
+
     const [mensagemCaixa, setMensagemCaixa] = useState("");
     const [tipoMensagem, setTipoMensagem] = useState("erro");
 
     const [formaPagamento, setFormaPagamento] = useState("dinheiro");
-    const [isFinalizando, setIsFinalizando] = useState(false);
 
+    const [isFinalizando, setIsFinalizando] = useState(false);
     const finalizacaoEmAndamento = useRef(false);
+
+    const [clientesAutorizados, setClientesAutorizados] = useState([]);
+    const [clienteId, setClienteId] = useState("");
+    const [carregandoClientes, setCarregandoClientes] = useState(false);
 
     const totalCentavos = carrinho.reduce((total, produto) => {
         return total + produto.precoVendaCentavos * produto.quantidade;
@@ -34,6 +41,64 @@ function Caixa() {
         setMensagemCaixa(mensagem);
         setTipoMensagem(tipo);
     }
+
+    useEffect(() => {
+        let componenteAtivo = true;
+
+        if (formaPagamento !== "prazo") {
+            setClienteId("");
+            setClientesAutorizados([]);
+            setCarregandoClientes(false);
+
+            return () => {
+                componenteAtivo = false;
+            };
+        }
+
+        async function carregarClientes() {
+            setCarregandoClientes(true);
+            setClienteId("");
+            setClientesAutorizados([]);
+
+            try {
+                const clientes = await listarClientesAutorizados();
+
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setClientesAutorizados(clientes);
+
+                if (clientes.length === 0) {
+                    exibirMensagemCaixa(
+                        "Não existem clientes ativos autorizados para compra a prazo."
+                    );
+                } else {
+                    setMensagemCaixa("");
+                }
+            } catch (error) {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                console.error("Erro ao carregar clientes:", error);
+
+                exibirMensagemCaixa(
+                    error.message || "Erro ao consultar clientes autorizados."
+                );
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoClientes(false);
+                }
+            }
+        }
+
+        carregarClientes();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [formaPagamento]);
 
     function adicionarAoCarrinho(produto) {
         if (finalizacaoEmAndamento.current) {
@@ -229,6 +294,13 @@ function Caixa() {
             return;
         }
 
+        if (formaPagamento === "prazo" && !clienteId) {
+            exibirMensagemCaixa(
+                "Selecione um cliente autorizado para finalizar a venda a prazo."
+            );
+            return;
+        }
+
         finalizacaoEmAndamento.current = true;
         setIsFinalizando(true);
         setMensagemCaixa("");
@@ -237,6 +309,9 @@ function Caixa() {
 
         const dadosVenda = {
             formaPagamento,
+            ...(formaPagamento === "prazo"
+                ? { clienteId: Number(clienteId) }
+                : {}),
             itens: carrinho.map((produto) => ({
                 produtoId: produto.id,
                 quantidade: produto.quantidade
@@ -247,6 +322,7 @@ function Caixa() {
             const venda = await finalizarVenda(dadosVenda);
 
             setCarrinho([]);
+            setClienteId("");
 
             exibirMensagemCaixa(
                 `Venda #${venda.id} finalizada com sucesso. Total: ${
@@ -387,24 +463,82 @@ function Caixa() {
                         <select
                             id="formaPagamento"
                             value={formaPagamento}
-                            onChange={(event) =>
-                                setFormaPagamento(event.target.value)
-                            }
+                            onChange={(event) => {
+                                setFormaPagamento(event.target.value);
+                                setMensagemCaixa("");
+                            }}
                             disabled={isFinalizando}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                         >
                             <option value="dinheiro">Dinheiro</option>
                             <option value="pix">Pix</option>
                             <option value="cartao">Cartão</option>
+                            <option value="prazo">Prazo</option>
                         </select>
                     </div>
+
+                    {formaPagamento === "prazo" && (
+                        <div className="mt-4">
+                            <label
+                                htmlFor="clientePrazo"
+                                className="mb-2 block text-sm font-semibold"
+                            >
+                                Cliente autorizado
+                            </label>
+
+                            <select
+                                id="clientePrazo"
+                                value={clienteId}
+                                onChange={(event) => {
+                                    setClienteId(event.target.value);
+                                    setMensagemCaixa("");
+                                }}
+                                disabled={
+                                    isFinalizando ||
+                                    carregandoClientes ||
+                                    clientesAutorizados.length === 0
+                                }
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+                            >
+                                <option value="">
+                                    {carregandoClientes
+                                        ? "Carregando clientes..."
+                                        : "Selecione um cliente"}
+                                </option>
+
+                                {clientesAutorizados.map((cliente) => (
+                                    <option
+                                        key={cliente.id}
+                                        value={cliente.id}
+                                    >
+                                        {cliente.nome}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <p className="mt-2 text-xs text-slate-500">
+                                O pagamento deverá ser realizado em até
+                                15 dias após a venda.
+                            </p>
+                        </div>
+                    )}
 
                     <button
                         type="button"
                         onClick={handleFinalizarVenda}
-                        disabled={carrinho.length === 0 || isFinalizando}
+                        disabled={
+                            carrinho.length === 0 ||
+                            isFinalizando ||
+                            (formaPagamento === "prazo" &&
+                                (carregandoClientes ||
+                                    clientesAutorizados.length === 0))
+                        }
                         className={`mt-6 w-full rounded-lg px-4 py-3 font-semibold text-white transition ${
-                            carrinho.length === 0 || isFinalizando
+                            carrinho.length === 0 ||
+                            isFinalizando ||
+                            (formaPagamento === "prazo" &&
+                                (carregandoClientes ||
+                                    clientesAutorizados.length === 0))
                                 ? "cursor-not-allowed bg-slate-300"
                                 : "bg-emerald-600 hover:bg-emerald-700"
                         }`}
